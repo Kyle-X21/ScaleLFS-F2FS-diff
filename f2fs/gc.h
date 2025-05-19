@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * fs/f2fs/gc.h
+ * fs/f3fs/gc.h
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com/
@@ -30,8 +30,23 @@
 /* Search max. number of dirty segments to select a victim segment */
 #define DEF_MAX_VICTIM_SEARCH 4096 /* covers 8GB */
 
-struct f2fs_gc_kthread {
-	struct task_struct *f2fs_gc_task;
+#define NUM_GC_WORKER (32)
+
+#define VICTIM_COUNT (16)
+
+struct worker_arg {
+  struct f3fs_sb_info* sbi;
+  struct f3fs_gc_control* gc_control;
+  int ret;
+  bool state;
+  char idx;
+  unsigned int multiple_victim[VICTIM_COUNT];
+	wait_queue_head_t wq;
+  wait_queue_head_t caller_wq;
+};
+
+struct f3fs_gc_kthread {
+	struct task_struct *f3fs_gc_task;
 	wait_queue_head_t gc_wait_queue_head;
 
 	/* for gc sleep time */
@@ -45,9 +60,11 @@ struct f2fs_gc_kthread {
 
 	/* for GC_MERGE mount option */
 	wait_queue_head_t fggc_wq;		/*
-						 * caller of f2fs_balance_fs()
+						 * caller of f3fs_balance_fs()
 						 * will wait on this wait queue.
 						 */
+  struct worker_arg* worker_args;
+  struct task_struct** gc_workers;
 };
 
 struct gc_inode_list {
@@ -78,13 +95,13 @@ struct victim_entry {
 
 /*
  * On a Zoned device zone-capacity can be less than zone-size and if
- * zone-capacity is not aligned to f2fs segment size(2MB), then the segment
+ * zone-capacity is not aligned to f3fs segment size(2MB), then the segment
  * starting just before zone-capacity has some blocks spanning across the
  * zone-capacity, these blocks are not usable.
  * Such spanning segments can be in free list so calculate the sum of usable
  * blocks in currently free segments including normal and spanning segments.
  */
-static inline block_t free_segs_blk_count_zoned(struct f2fs_sb_info *sbi)
+static inline block_t free_segs_blk_count_zoned(struct f3fs_sb_info *sbi)
 {
 	block_t free_seg_blks = 0;
 	struct free_segmap_info *free_i = FREE_I(sbi);
@@ -93,21 +110,21 @@ static inline block_t free_segs_blk_count_zoned(struct f2fs_sb_info *sbi)
 	spin_lock(&free_i->segmap_lock);
 	for (j = 0; j < MAIN_SEGS(sbi); j++)
 		if (!test_bit(j, free_i->free_segmap))
-			free_seg_blks += f2fs_usable_blks_in_seg(sbi, j);
+			free_seg_blks += f3fs_usable_blks_in_seg(sbi, j);
 	spin_unlock(&free_i->segmap_lock);
 
 	return free_seg_blks;
 }
 
-static inline block_t free_segs_blk_count(struct f2fs_sb_info *sbi)
+static inline block_t free_segs_blk_count(struct f3fs_sb_info *sbi)
 {
-	if (f2fs_sb_has_blkzoned(sbi))
+	if (f3fs_sb_has_blkzoned(sbi))
 		return free_segs_blk_count_zoned(sbi);
 
 	return free_segments(sbi) << sbi->log_blocks_per_seg;
 }
 
-static inline block_t free_user_blocks(struct f2fs_sb_info *sbi)
+static inline block_t free_user_blocks(struct f3fs_sb_info *sbi)
 {
 	block_t free_blks, ovp_blks;
 
@@ -130,7 +147,7 @@ static inline block_t limit_free_user_blocks(block_t reclaimable_user_blocks)
 	return (long)(reclaimable_user_blocks * LIMIT_FREE_BLOCK) / 100;
 }
 
-static inline void increase_sleep_time(struct f2fs_gc_kthread *gc_th,
+static inline void increase_sleep_time(struct f3fs_gc_kthread *gc_th,
 							unsigned int *wait)
 {
 	unsigned int min_time = gc_th->min_sleep_time;
@@ -145,7 +162,7 @@ static inline void increase_sleep_time(struct f2fs_gc_kthread *gc_th,
 		*wait += min_time;
 }
 
-static inline void decrease_sleep_time(struct f2fs_gc_kthread *gc_th,
+static inline void decrease_sleep_time(struct f3fs_gc_kthread *gc_th,
 							unsigned int *wait)
 {
 	unsigned int min_time = gc_th->min_sleep_time;
@@ -159,7 +176,7 @@ static inline void decrease_sleep_time(struct f2fs_gc_kthread *gc_th,
 		*wait -= min_time;
 }
 
-static inline bool has_enough_invalid_blocks(struct f2fs_sb_info *sbi)
+static inline bool has_enough_invalid_blocks(struct f3fs_sb_info *sbi)
 {
 	block_t user_block_count = sbi->user_block_count;
 	block_t invalid_user_blocks = user_block_count -
@@ -174,3 +191,5 @@ static inline bool has_enough_invalid_blocks(struct f2fs_sb_info *sbi)
 		free_user_blocks(sbi) <
 			limit_free_user_blocks(invalid_user_blocks));
 }
+
+int do_gc(struct f3fs_sb_info *sbi, struct f3fs_gc_control *gc_control, char worker_idx, unsigned int* multiple_victim);

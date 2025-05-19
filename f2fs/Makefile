@@ -1,12 +1,19 @@
 # SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_F2FS_FS) += f2fs.o
+obj-m += scalelfs.o
 
-f2fs-y		:= dir.o file.o inode.o namei.o hash.o super.o inline.o
-f2fs-y		+= checkpoint.o gc.o data.o node.o segment.o recovery.o
-f2fs-y		+= shrinker.o extent_cache.o sysfs.o
-f2fs-$(CONFIG_F2FS_STAT_FS) += debug.o
-f2fs-$(CONFIG_F2FS_FS_XATTR) += xattr.o
-f2fs-$(CONFIG_F2FS_FS_POSIX_ACL) += acl.o
-f2fs-$(CONFIG_FS_VERITY) += verity.o
-f2fs-$(CONFIG_F2FS_FS_COMPRESSION) += compress.o
-f2fs-$(CONFIG_F2FS_IOSTAT) += iostat.o
+scalelfs-y		:= dir.o file.o inode.o namei.o hash.o super.o inline.o
+scalelfs-y		+= checkpoint.o gc.o data.o node.o segment.o recovery.o
+scalelfs-y		+= shrinker.o extent_cache.o sysfs.o lockfree_list.o
+scalelfs-$(CONFIG_FS_VERITY) += verity.o
+
+default:
+	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) modules
+
+clean:
+	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) clean
+
+lock_test: rm_lock_test
+	$(CC) test_range_lock.c lockfree_list.c -o lock_test -lpthread $(shell pkg-config --cflags --libs glib-2.0) -g
+
+rm_lock_test:
+	rm -f lock_test

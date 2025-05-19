@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * f2fs debugging statistics
+ * f3fs debugging statistics
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com/
@@ -10,28 +10,28 @@
 
 #include <linux/fs.h>
 #include <linux/backing-dev.h>
-#include <linux/f2fs_fs.h>
+#include <linux/f3fs_fs.h>
 #include <linux/blkdev.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
-#include "f2fs.h"
+#include "f3fs.h"
 #include "node.h"
 #include "segment.h"
 #include "gc.h"
 
-static LIST_HEAD(f2fs_stat_list);
-static DEFINE_RAW_SPINLOCK(f2fs_stat_lock);
+static LIST_HEAD(f3fs_stat_list);
+static DEFINE_RAW_SPINLOCK(f3fs_stat_lock);
 #ifdef CONFIG_DEBUG_FS
-static struct dentry *f2fs_debugfs_root;
+static struct dentry *f3fs_debugfs_root;
 #endif
 
 /*
  * This function calculates BDF of every segments
  */
-void f2fs_update_sit_info(struct f2fs_sb_info *sbi)
+void f3fs_update_sit_info(struct f3fs_sb_info *sbi)
 {
-	struct f2fs_stat_info *si = F2FS_STAT(sbi);
+	struct f3fs_stat_info *si = F3FS_STAT(sbi);
 	unsigned long long blks_per_sec, hblks_per_sec, total_vblocks;
 	unsigned long long bimodal, dist;
 	unsigned int segno, vblocks;
@@ -60,10 +60,10 @@ void f2fs_update_sit_info(struct f2fs_sb_info *sbi)
 }
 
 #ifdef CONFIG_DEBUG_FS
-static void update_general_status(struct f2fs_sb_info *sbi)
+static void update_general_status(struct f3fs_sb_info *sbi)
 {
-	struct f2fs_stat_info *si = F2FS_STAT(sbi);
-	struct f2fs_super_block *raw_super = F2FS_RAW_SUPER(sbi);
+	struct f3fs_stat_info *si = F3FS_STAT(sbi);
+	struct f3fs_super_block *raw_super = F3FS_RAW_SUPER(sbi);
 	int i;
 
 	/* these will be changed if online resize is done */
@@ -81,25 +81,25 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 	si->ext_tree = atomic_read(&sbi->total_ext_tree);
 	si->zombie_tree = atomic_read(&sbi->total_zombie_tree);
 	si->ext_node = atomic_read(&sbi->total_ext_node);
-	si->ndirty_node = get_pages(sbi, F2FS_DIRTY_NODES);
-	si->ndirty_dent = get_pages(sbi, F2FS_DIRTY_DENTS);
-	si->ndirty_meta = get_pages(sbi, F2FS_DIRTY_META);
-	si->ndirty_data = get_pages(sbi, F2FS_DIRTY_DATA);
-	si->ndirty_qdata = get_pages(sbi, F2FS_DIRTY_QDATA);
-	si->ndirty_imeta = get_pages(sbi, F2FS_DIRTY_IMETA);
+	si->ndirty_node = get_pages(sbi, F3FS_DIRTY_NODES);
+	si->ndirty_dent = get_pages(sbi, F3FS_DIRTY_DENTS);
+	si->ndirty_meta = get_pages(sbi, F3FS_DIRTY_META);
+	si->ndirty_data = get_pages(sbi, F3FS_DIRTY_DATA);
+	si->ndirty_qdata = get_pages(sbi, F3FS_DIRTY_QDATA);
+	si->ndirty_imeta = get_pages(sbi, F3FS_DIRTY_IMETA);
 	si->ndirty_dirs = sbi->ndirty_inode[DIR_INODE];
 	si->ndirty_files = sbi->ndirty_inode[FILE_INODE];
 	si->nquota_files = sbi->nquota_files;
 	si->ndirty_all = sbi->ndirty_inode[DIRTY_META];
 	si->aw_cnt = sbi->atomic_files;
 	si->max_aw_cnt = atomic_read(&sbi->max_aw_cnt);
-	si->nr_dio_read = get_pages(sbi, F2FS_DIO_READ);
-	si->nr_dio_write = get_pages(sbi, F2FS_DIO_WRITE);
-	si->nr_wb_cp_data = get_pages(sbi, F2FS_WB_CP_DATA);
-	si->nr_wb_data = get_pages(sbi, F2FS_WB_DATA);
-	si->nr_rd_data = get_pages(sbi, F2FS_RD_DATA);
-	si->nr_rd_node = get_pages(sbi, F2FS_RD_NODE);
-	si->nr_rd_meta = get_pages(sbi, F2FS_RD_META);
+	si->nr_dio_read = get_pages(sbi, F3FS_DIO_READ);
+	si->nr_dio_write = get_pages(sbi, F3FS_DIO_WRITE);
+	si->nr_wb_cp_data = get_pages(sbi, F3FS_WB_CP_DATA);
+	si->nr_wb_data = get_pages(sbi, F3FS_WB_DATA);
+	si->nr_rd_data = get_pages(sbi, F3FS_RD_DATA);
+	si->nr_rd_node = get_pages(sbi, F3FS_RD_NODE);
+	si->nr_rd_meta = get_pages(sbi, F3FS_RD_META);
 	if (SM_I(sbi)->fcc_info) {
 		si->nr_flushed =
 			atomic_read(&SM_I(sbi)->fcc_info->issued_flush);
@@ -149,7 +149,7 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 		si->node_pages = NODE_MAPPING(sbi)->nrpages;
 	if (sbi->meta_inode)
 		si->meta_pages = META_MAPPING(sbi)->nrpages;
-#ifdef CONFIG_F2FS_FS_COMPRESSION
+#ifdef CONFIG_F3FS_FS_COMPRESSION
 	if (sbi->compress_inode) {
 		si->compress_pages = COMPRESS_MAPPING(sbi)->nrpages;
 		si->compress_page_hit = atomic_read(&sbi->compress_page_hit);
@@ -214,29 +214,29 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 /*
  * This function calculates memory footprint.
  */
-static void update_mem_info(struct f2fs_sb_info *sbi)
+static void update_mem_info(struct f3fs_sb_info *sbi)
 {
-	struct f2fs_stat_info *si = F2FS_STAT(sbi);
+	struct f3fs_stat_info *si = F3FS_STAT(sbi);
 	int i;
 
 	if (si->base_mem)
 		goto get_cache;
 
 	/* build stat */
-	si->base_mem = sizeof(struct f2fs_stat_info);
+	si->base_mem = sizeof(struct f3fs_stat_info);
 
 	/* build superblock */
-	si->base_mem += sizeof(struct f2fs_sb_info) + sbi->sb->s_blocksize;
-	si->base_mem += 2 * sizeof(struct f2fs_inode_info);
+	si->base_mem += sizeof(struct f3fs_sb_info) + sbi->sb->s_blocksize;
+	si->base_mem += 2 * sizeof(struct f3fs_inode_info);
 	si->base_mem += sizeof(*sbi->ckpt);
 
 	/* build sm */
-	si->base_mem += sizeof(struct f2fs_sm_info);
+	si->base_mem += sizeof(struct f3fs_sm_info);
 
 	/* build sit */
 	si->base_mem += sizeof(struct sit_info);
 	si->base_mem += MAIN_SEGS(sbi) * sizeof(struct seg_entry);
-	si->base_mem += f2fs_bitmap_size(MAIN_SEGS(sbi));
+	si->base_mem += f3fs_bitmap_size(MAIN_SEGS(sbi));
 	si->base_mem += 2 * SIT_VBLOCK_MAP_SIZE * MAIN_SEGS(sbi);
 	si->base_mem += SIT_VBLOCK_MAP_SIZE * MAIN_SEGS(sbi);
 	si->base_mem += SIT_VBLOCK_MAP_SIZE;
@@ -246,8 +246,8 @@ static void update_mem_info(struct f2fs_sb_info *sbi)
 
 	/* build free segmap */
 	si->base_mem += sizeof(struct free_segmap_info);
-	si->base_mem += f2fs_bitmap_size(MAIN_SEGS(sbi));
-	si->base_mem += f2fs_bitmap_size(MAIN_SECS(sbi));
+	si->base_mem += f3fs_bitmap_size(MAIN_SEGS(sbi));
+	si->base_mem += f3fs_bitmap_size(MAIN_SECS(sbi));
 
 	/* build curseg */
 	si->base_mem += sizeof(struct curseg_info) * NR_CURSEG_TYPE;
@@ -255,15 +255,15 @@ static void update_mem_info(struct f2fs_sb_info *sbi)
 
 	/* build dirty segmap */
 	si->base_mem += sizeof(struct dirty_seglist_info);
-	si->base_mem += NR_DIRTY_TYPE * f2fs_bitmap_size(MAIN_SEGS(sbi));
-	si->base_mem += f2fs_bitmap_size(MAIN_SECS(sbi));
+	si->base_mem += NR_DIRTY_TYPE * f3fs_bitmap_size(MAIN_SEGS(sbi));
+	si->base_mem += f3fs_bitmap_size(MAIN_SECS(sbi));
 
 	/* build nm */
-	si->base_mem += sizeof(struct f2fs_nm_info);
+	si->base_mem += sizeof(struct f3fs_nm_info);
 	si->base_mem += __bitmap_size(sbi, NAT_BITMAP);
-	si->base_mem += (NM_I(sbi)->nat_bits_blocks << F2FS_BLKSIZE_BITS);
+	si->base_mem += (NM_I(sbi)->nat_bits_blocks << F3FS_BLKSIZE_BITS);
 	si->base_mem += NM_I(sbi)->nat_blocks *
-				f2fs_bitmap_size(NAT_ENTRY_PER_BLOCK);
+				f3fs_bitmap_size(NAT_ENTRY_PER_BLOCK);
 	si->base_mem += NM_I(sbi)->nat_blocks / 8;
 	si->base_mem += NM_I(sbi)->nat_blocks * sizeof(unsigned short);
 
@@ -272,7 +272,7 @@ get_cache:
 
 	/* build gc */
 	if (sbi->gc_thread)
-		si->cache_mem += sizeof(struct f2fs_gc_kthread);
+		si->cache_mem += sizeof(struct f3fs_gc_kthread);
 
 	/* build merge flush thread */
 	if (SM_I(sbi)->fcc_info)
@@ -309,7 +309,7 @@ get_cache:
 
 		si->page_mem += (unsigned long long)npages << PAGE_SHIFT;
 	}
-#ifdef CONFIG_F2FS_FS_COMPRESSION
+#ifdef CONFIG_F3FS_FS_COMPRESSION
 	if (sbi->compress_inode) {
 		unsigned npages = COMPRESS_MAPPING(sbi)->nrpages;
 		si->page_mem += (unsigned long long)npages << PAGE_SHIFT;
@@ -337,19 +337,19 @@ static char *s_flag[] = {
 
 static int stat_show(struct seq_file *s, void *v)
 {
-	struct f2fs_stat_info *si;
+	struct f3fs_stat_info *si;
 	int i = 0, j = 0;
 	unsigned long flags;
 
-	raw_spin_lock_irqsave(&f2fs_stat_lock, flags);
-	list_for_each_entry(si, &f2fs_stat_list, stat_list) {
+	raw_spin_lock_irqsave(&f3fs_stat_lock, flags);
+	list_for_each_entry(si, &f3fs_stat_list, stat_list) {
 		update_general_status(si->sbi);
 
 		seq_printf(s, "\n=====[ partition info(%pg). #%d, %s, CP: %s]=====\n",
 			si->sbi->sb->s_bdev, i++,
-			f2fs_readonly(si->sbi->sb) ? "RO": "RW",
+			f3fs_readonly(si->sbi->sb) ? "RO": "RW",
 			is_set_ckpt_flags(si->sbi, CP_DISABLED_FLAG) ?
-			"Disabled" : (f2fs_cp_error(si->sbi) ? "Error" : "Good"));
+			"Disabled" : (f3fs_cp_error(si->sbi) ? "Error" : "Good"));
 		if (si->sbi->s_flag) {
 			seq_puts(s, "[SBI:");
 			for_each_set_bit(j, &si->sbi->s_flag, 32)
@@ -497,7 +497,7 @@ static int stat_show(struct seq_file *s, void *v)
 				si->hit_total, si->total_ext);
 		seq_printf(s, "  - Inner Struct Count: tree: %d(%d), node: %d\n",
 				si->ext_tree, si->zombie_tree, si->ext_node);
-		seq_puts(s, "\nBalancing F2FS Async:\n");
+		seq_puts(s, "\nBalancing F3FS Async:\n");
 		seq_printf(s, "  - DIO (R: %4d, W: %4d)\n",
 			   si->nr_dio_read, si->nr_dio_write);
 		seq_printf(s, "  - IO_R (Data: %4d, Node: %4d, Meta: %4d\n",
@@ -553,7 +553,7 @@ static int stat_show(struct seq_file *s, void *v)
 			   si->block_count[LFS], si->segment_count[LFS]);
 
 		/* segment usage info */
-		f2fs_update_sit_info(si->sbi);
+		f3fs_update_sit_info(si->sbi);
 		seq_printf(s, "\nBDF: %u, avg. vblocks: %u\n",
 			   si->bimodal, si->avg_vblocks);
 
@@ -568,21 +568,21 @@ static int stat_show(struct seq_file *s, void *v)
 		seq_printf(s, "  - paged : %llu KB\n",
 				si->page_mem >> 10);
 	}
-	raw_spin_unlock_irqrestore(&f2fs_stat_lock, flags);
+	raw_spin_unlock_irqrestore(&f3fs_stat_lock, flags);
 	return 0;
 }
 
 DEFINE_SHOW_ATTRIBUTE(stat);
 #endif
 
-int f2fs_build_stats(struct f2fs_sb_info *sbi)
+int f3fs_build_stats(struct f3fs_sb_info *sbi)
 {
-	struct f2fs_super_block *raw_super = F2FS_RAW_SUPER(sbi);
-	struct f2fs_stat_info *si;
+	struct f3fs_super_block *raw_super = F3FS_RAW_SUPER(sbi);
+	struct f3fs_stat_info *si;
 	unsigned long flags;
 	int i;
 
-	si = f2fs_kzalloc(sbi, sizeof(struct f2fs_stat_info), GFP_KERNEL);
+	si = f3fs_kzalloc(sbi, sizeof(struct f3fs_stat_info), GFP_KERNEL);
 	if (!si)
 		return -ENOMEM;
 
@@ -613,39 +613,39 @@ int f2fs_build_stats(struct f2fs_sb_info *sbi)
 
 	atomic_set(&sbi->max_aw_cnt, 0);
 
-	raw_spin_lock_irqsave(&f2fs_stat_lock, flags);
-	list_add_tail(&si->stat_list, &f2fs_stat_list);
-	raw_spin_unlock_irqrestore(&f2fs_stat_lock, flags);
+	raw_spin_lock_irqsave(&f3fs_stat_lock, flags);
+	list_add_tail(&si->stat_list, &f3fs_stat_list);
+	raw_spin_unlock_irqrestore(&f3fs_stat_lock, flags);
 
 	return 0;
 }
 
-void f2fs_destroy_stats(struct f2fs_sb_info *sbi)
+void f3fs_destroy_stats(struct f3fs_sb_info *sbi)
 {
-	struct f2fs_stat_info *si = F2FS_STAT(sbi);
+	struct f3fs_stat_info *si = F3FS_STAT(sbi);
 	unsigned long flags;
 
-	raw_spin_lock_irqsave(&f2fs_stat_lock, flags);
+	raw_spin_lock_irqsave(&f3fs_stat_lock, flags);
 	list_del(&si->stat_list);
-	raw_spin_unlock_irqrestore(&f2fs_stat_lock, flags);
+	raw_spin_unlock_irqrestore(&f3fs_stat_lock, flags);
 
 	kfree(si);
 }
 
-void __init f2fs_create_root_stats(void)
+void __init f3fs_create_root_stats(void)
 {
 #ifdef CONFIG_DEBUG_FS
-	f2fs_debugfs_root = debugfs_create_dir("f2fs", NULL);
+	f3fs_debugfs_root = debugfs_create_dir("f3fs", NULL);
 
-	debugfs_create_file("status", 0444, f2fs_debugfs_root, NULL,
+	debugfs_create_file("status", 0444, f3fs_debugfs_root, NULL,
 			    &stat_fops);
 #endif
 }
 
-void f2fs_destroy_root_stats(void)
+void f3fs_destroy_root_stats(void)
 {
 #ifdef CONFIG_DEBUG_FS
-	debugfs_remove_recursive(f2fs_debugfs_root);
-	f2fs_debugfs_root = NULL;
+	debugfs_remove_recursive(f3fs_debugfs_root);
+	f3fs_debugfs_root = NULL;
 #endif
 }

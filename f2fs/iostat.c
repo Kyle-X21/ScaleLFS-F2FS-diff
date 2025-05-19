@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * f2fs iostat support
+ * f3fs iostat support
  *
  * Copyright 2021 Google LLC
  * Author: Daeho Jeong <daehojeong@google.com>
  */
 
 #include <linux/fs.h>
-#include <linux/f2fs_fs.h>
+#include <linux/f3fs_fs.h>
 #include <linux/seq_file.h>
 
-#include "f2fs.h"
+#include "f3fs.h"
 #include "iostat.h"
-#include <trace/events/f2fs.h>
+#include <trace/events/f3fs.h>
 
 #define NUM_PREALLOC_IOSTAT_CTXS	128
 static struct kmem_cache *bio_iostat_ctx_cache;
@@ -21,7 +21,7 @@ static mempool_t *bio_iostat_ctx_pool;
 int __maybe_unused iostat_info_seq_show(struct seq_file *seq, void *offset)
 {
 	struct super_block *sb = seq->private;
-	struct f2fs_sb_info *sbi = F2FS_SB(sb);
+	struct f3fs_sb_info *sbi = F3FS_SB(sb);
 	time64_t now = ktime_get_real_seconds();
 
 	if (!sbi->iostat_enable)
@@ -85,11 +85,11 @@ int __maybe_unused iostat_info_seq_show(struct seq_file *seq, void *offset)
 	return 0;
 }
 
-static inline void __record_iostat_latency(struct f2fs_sb_info *sbi)
+static inline void __record_iostat_latency(struct f3fs_sb_info *sbi)
 {
 	int io, idx = 0;
 	unsigned int cnt;
-	struct f2fs_iostat_latency iostat_lat[MAX_IO_TYPE][NR_PAGE_TYPE];
+	struct f3fs_iostat_latency iostat_lat[MAX_IO_TYPE][NR_PAGE_TYPE];
 	struct iostat_lat_info *io_lat = sbi->iostat_io_lat;
 	unsigned long flags;
 
@@ -109,10 +109,10 @@ static inline void __record_iostat_latency(struct f2fs_sb_info *sbi)
 	}
 	spin_unlock_irqrestore(&sbi->iostat_lat_lock, flags);
 
-	trace_f2fs_iostat_latency(sbi, iostat_lat);
+	trace_f3fs_iostat_latency(sbi, iostat_lat);
 }
 
-static inline void f2fs_record_iostat(struct f2fs_sb_info *sbi)
+static inline void f3fs_record_iostat(struct f3fs_sb_info *sbi)
 {
 	unsigned long long iostat_diff[NR_IO_TYPE];
 	int i;
@@ -137,12 +137,12 @@ static inline void f2fs_record_iostat(struct f2fs_sb_info *sbi)
 	}
 	spin_unlock_irqrestore(&sbi->iostat_lock, flags);
 
-	trace_f2fs_iostat(sbi, iostat_diff);
+	trace_f3fs_iostat(sbi, iostat_diff);
 
 	__record_iostat_latency(sbi);
 }
 
-void f2fs_reset_iostat(struct f2fs_sb_info *sbi)
+void f3fs_reset_iostat(struct f3fs_sb_info *sbi)
 {
 	struct iostat_lat_info *io_lat = sbi->iostat_io_lat;
 	int i;
@@ -159,7 +159,7 @@ void f2fs_reset_iostat(struct f2fs_sb_info *sbi)
 	spin_unlock_irq(&sbi->iostat_lat_lock);
 }
 
-void f2fs_update_iostat(struct f2fs_sb_info *sbi,
+void f3fs_update_iostat(struct f3fs_sb_info *sbi,
 			enum iostat_type type, unsigned long long io_bytes)
 {
 	unsigned long flags;
@@ -178,7 +178,7 @@ void f2fs_update_iostat(struct f2fs_sb_info *sbi,
 
 	spin_unlock_irqrestore(&sbi->iostat_lock, flags);
 
-	f2fs_record_iostat(sbi);
+	f3fs_record_iostat(sbi);
 }
 
 static inline void __update_iostat_latency(struct bio_iostat_ctx *iostat_ctx,
@@ -186,7 +186,7 @@ static inline void __update_iostat_latency(struct bio_iostat_ctx *iostat_ctx,
 {
 	unsigned long ts_diff;
 	unsigned int iotype = iostat_ctx->type;
-	struct f2fs_sb_info *sbi = iostat_ctx->sbi;
+	struct f3fs_sb_info *sbi = iostat_ctx->sbi;
 	struct iostat_lat_info *io_lat = sbi->iostat_io_lat;
 	int idx;
 	unsigned long flags;
@@ -228,7 +228,7 @@ void iostat_update_and_unbind_ctx(struct bio *bio, int rw)
 	mempool_free(iostat_ctx, bio_iostat_ctx_pool);
 }
 
-void iostat_alloc_and_bind_ctx(struct f2fs_sb_info *sbi,
+void iostat_alloc_and_bind_ctx(struct f3fs_sb_info *sbi,
 		struct bio *bio, struct bio_post_read_ctx *ctx)
 {
 	struct bio_iostat_ctx *iostat_ctx;
@@ -241,10 +241,10 @@ void iostat_alloc_and_bind_ctx(struct f2fs_sb_info *sbi,
 	bio->bi_private = iostat_ctx;
 }
 
-int __init f2fs_init_iostat_processing(void)
+int __init f3fs_init_iostat_processing(void)
 {
 	bio_iostat_ctx_cache =
-		kmem_cache_create("f2fs_bio_iostat_ctx",
+		kmem_cache_create("f3fs_bio_iostat_ctx",
 				  sizeof(struct bio_iostat_ctx), 0, 0, NULL);
 	if (!bio_iostat_ctx_cache)
 		goto fail;
@@ -261,20 +261,20 @@ fail:
 	return -ENOMEM;
 }
 
-void f2fs_destroy_iostat_processing(void)
+void f3fs_destroy_iostat_processing(void)
 {
 	mempool_destroy(bio_iostat_ctx_pool);
 	kmem_cache_destroy(bio_iostat_ctx_cache);
 }
 
-int f2fs_init_iostat(struct f2fs_sb_info *sbi)
+int f3fs_init_iostat(struct f3fs_sb_info *sbi)
 {
 	/* init iostat info */
 	spin_lock_init(&sbi->iostat_lock);
 	spin_lock_init(&sbi->iostat_lat_lock);
 	sbi->iostat_enable = false;
 	sbi->iostat_period_ms = DEFAULT_IOSTAT_PERIOD_MS;
-	sbi->iostat_io_lat = f2fs_kzalloc(sbi, sizeof(struct iostat_lat_info),
+	sbi->iostat_io_lat = f3fs_kzalloc(sbi, sizeof(struct iostat_lat_info),
 					GFP_KERNEL);
 	if (!sbi->iostat_io_lat)
 		return -ENOMEM;
@@ -282,7 +282,7 @@ int f2fs_init_iostat(struct f2fs_sb_info *sbi)
 	return 0;
 }
 
-void f2fs_destroy_iostat(struct f2fs_sb_info *sbi)
+void f3fs_destroy_iostat(struct f3fs_sb_info *sbi)
 {
 	kfree(sbi->iostat_io_lat);
 }

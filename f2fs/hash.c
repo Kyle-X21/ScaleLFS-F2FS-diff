@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * fs/f2fs/hash.c
+ * fs/f3fs/hash.c
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com/
@@ -11,11 +11,11 @@
  */
 #include <linux/types.h>
 #include <linux/fs.h>
-#include <linux/f2fs_fs.h>
+#include <linux/f3fs_fs.h>
 #include <linux/pagemap.h>
 #include <linux/unicode.h>
 
-#include "f2fs.h"
+#include "f3fs.h"
 
 /*
  * Hashing code copied from ext3
@@ -85,7 +85,7 @@ static u32 TEA_hash_name(const u8 *p, size_t len)
 			break;
 		len -= 16;
 	}
-	return buf[0] & ~F2FS_HASH_COL_BIT;
+	return buf[0] & ~F3FS_HASH_COL_BIT;
 }
 
 /*
@@ -93,7 +93,7 @@ static u32 TEA_hash_name(const u8 *p, size_t len)
  * For casefolded directories, @fname->usr_fname must be set, and also
  * @fname->cf_name if the filename is valid Unicode and is not "." or "..".
  */
-void f2fs_hash_filename(const struct inode *dir, struct f2fs_filename *fname)
+void f3fs_hash_filename(const struct inode *dir, struct f3fs_filename *fname)
 {
 	const u8 *name = fname->disk_name.name;
 	size_t len = fname->disk_name.len;

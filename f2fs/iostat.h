@@ -3,12 +3,12 @@
  * Copyright 2021 Google LLC
  * Author: Daeho Jeong <daehojeong@google.com>
  */
-#ifndef __F2FS_IOSTAT_H__
-#define __F2FS_IOSTAT_H__
+#ifndef __F3FS_IOSTAT_H__
+#define __F3FS_IOSTAT_H__
 
 struct bio_post_read_ctx;
 
-#ifdef CONFIG_F2FS_IOSTAT
+#ifdef CONFIG_F3FS_IOSTAT
 
 #define DEFAULT_IOSTAT_PERIOD_MS	3000
 #define MIN_IOSTAT_PERIOD_MS		100
@@ -30,12 +30,12 @@ struct iostat_lat_info {
 
 extern int __maybe_unused iostat_info_seq_show(struct seq_file *seq,
 			void *offset);
-extern void f2fs_reset_iostat(struct f2fs_sb_info *sbi);
-extern void f2fs_update_iostat(struct f2fs_sb_info *sbi,
+extern void f3fs_reset_iostat(struct f3fs_sb_info *sbi);
+extern void f3fs_update_iostat(struct f3fs_sb_info *sbi,
 			enum iostat_type type, unsigned long long io_bytes);
 
 struct bio_iostat_ctx {
-	struct f2fs_sb_info *sbi;
+	struct f3fs_sb_info *sbi;
 	unsigned long submit_ts;
 	enum page_type type;
 	struct bio_post_read_ctx *post_read_ctx;
@@ -58,17 +58,17 @@ static inline struct bio_post_read_ctx *get_post_read_ctx(struct bio *bio)
 }
 
 extern void iostat_update_and_unbind_ctx(struct bio *bio, int rw);
-extern void iostat_alloc_and_bind_ctx(struct f2fs_sb_info *sbi,
+extern void iostat_alloc_and_bind_ctx(struct f3fs_sb_info *sbi,
 		struct bio *bio, struct bio_post_read_ctx *ctx);
-extern int f2fs_init_iostat_processing(void);
-extern void f2fs_destroy_iostat_processing(void);
-extern int f2fs_init_iostat(struct f2fs_sb_info *sbi);
-extern void f2fs_destroy_iostat(struct f2fs_sb_info *sbi);
+extern int f3fs_init_iostat_processing(void);
+extern void f3fs_destroy_iostat_processing(void);
+extern int f3fs_init_iostat(struct f3fs_sb_info *sbi);
+extern void f3fs_destroy_iostat(struct f3fs_sb_info *sbi);
 #else
-static inline void f2fs_update_iostat(struct f2fs_sb_info *sbi,
+static inline void f3fs_update_iostat(struct f3fs_sb_info *sbi,
 		enum iostat_type type, unsigned long long io_bytes) {}
 static inline void iostat_update_and_unbind_ctx(struct bio *bio, int rw) {}
-static inline void iostat_alloc_and_bind_ctx(struct f2fs_sb_info *sbi,
+static inline void iostat_alloc_and_bind_ctx(struct f3fs_sb_info *sbi,
 		struct bio *bio, struct bio_post_read_ctx *ctx) {}
 static inline void iostat_update_submit_ctx(struct bio *bio,
 		enum page_type type) {}
@@ -76,9 +76,9 @@ static inline struct bio_post_read_ctx *get_post_read_ctx(struct bio *bio)
 {
 	return bio->bi_private;
 }
-static inline int f2fs_init_iostat_processing(void) { return 0; }
-static inline void f2fs_destroy_iostat_processing(void) {}
-static inline int f2fs_init_iostat(struct f2fs_sb_info *sbi) { return 0; }
-static inline void f2fs_destroy_iostat(struct f2fs_sb_info *sbi) {}
+static inline int f3fs_init_iostat_processing(void) { return 0; }
+static inline void f3fs_destroy_iostat_processing(void) {}
+static inline int f3fs_init_iostat(struct f3fs_sb_info *sbi) { return 0; }
+static inline void f3fs_destroy_iostat(struct f3fs_sb_info *sbi) {}
 #endif
-#endif /* __F2FS_IOSTAT_H__ */
+#endif /* __F3FS_IOSTAT_H__ */
